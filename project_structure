@@ -1,0 +1,17 @@
+.
+├── docker-compose.yml
+├── README.md
+├── frontend/
+│   ├── Dockerfile
+│   ├── package.json
+│   ├── next.config.js
+│   └── src/
+│       ├── app/
+│       │   ├── page.tsx
+│       │   ├── globals.css
+│       │   └── layout.tsx
+├── backend/
+│   ├── Dockerfile
+│   ├── requirements.txt
+│   └── app/
+│       └── main.py 
