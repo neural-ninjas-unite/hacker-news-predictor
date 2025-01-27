@@ -31,5 +31,8 @@ A full stack application that predicts Hacker News scores using Next.js, FastAPI
 
 ## Data Files
 
-Place the training data file (`data-1737988940684.csv`) in the root directory before starting the services.
-This file is not included in the repository and needs to be obtained separately.
+The data file is (`data-1737988940684.csv`). It was queried from the database with this query:
+```sql
+SELECT title, score FROM hacker_news.items WHERE type = 'story' AND title IS NOT NULL
+ORDER BY id ASC LIMIT 10000
+```
