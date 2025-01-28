@@ -36,3 +36,22 @@ The data file is (`data-1737988940684.csv`). It was queried from the database wi
 SELECT title, score FROM hacker_news.items WHERE type = 'story' AND title IS NOT NULL
 ORDER BY id ASC LIMIT 10000
 ```
+
+## NK Test Lines
+
+The project includes comprehensive test suites for both frontend and backend components. The tests ensure code quality and functionality across the application.
+
+To run tests:
+
+1. Frontend tests:
+   ```bash
+   cd frontend
+   npm test
+   ```
+
+2. Backend tests:
+   ```bash
+   cd backend
+   python -m pytest
+   ```
+
