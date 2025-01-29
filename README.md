@@ -1,8 +1,7 @@
 # Hacker News Score Predictor
-
 A full stack application that predicts Hacker News scores using Next.js, FastAPI, and PostgreSQL.
 
-## Setup
+## Setaaaaaaaaaaa
 
 1. Install Docker and Docker Compose
 2. Navigate to the frontend directory and install dependencies:
