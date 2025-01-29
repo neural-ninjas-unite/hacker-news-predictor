@@ -9,6 +9,11 @@ import wandb
 import torch
 import os
 
+# # STEP 0: Set hyperparameters
+learning_rate = 0.003
+embedding_dim = 64
+batch_size=512
+
 
 # # STEP 1: Set the random seed
 # #
@@ -116,14 +121,14 @@ class SkipGramFoo(torch.nn.Module):
 # # STEP 6: Create the SkipGram model, optimizer and device
 # #
 # #
-args = (len(words_to_ids), 64, 2)
+args = (len(words_to_ids), embedding_dim, 2)
 mFoo = SkipGramFoo(*args)
 print('mFoo', sum(p.numel() for p in mFoo.parameters()))
-opFoo = torch.optim.Adam(mFoo.parameters(), lr=0.003)
+opFoo = torch.optim.Adam(mFoo.parameters(), lr=learning_rate)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
-# # STEP 7: Create the dataloader
+# # STEP 7: Create the sliding window, dataset and dataloader
 # #
 # #
 windows = list(more_itertools.windowed(tokens, 3))
@@ -132,34 +137,43 @@ targets = [[w[0], w[2]] for w in windows]
 input_tensor = torch.LongTensor(inputs)
 target_tensor = torch.LongTensor(targets)
 dataset = torch.utils.data.TensorDataset(input_tensor, target_tensor)
-dataloader = torch.utils.data.DataLoader(dataset, batch_size=512, shuffle=True)
+dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
 
+# # STEP 8: Train the SkipGram model
 # #
 # #
-# #
-# wandb.init(project='mlx6-word2vec', name='mFoo')
-# mFoo.to(device)
-# for epoch in range(1):
-#   prgs = tqdm.tqdm(dataloader, desc=f"Epoch {epoch+1}", leave=False)
-#   for inpt, trgs in prgs:
-#     inpt, trgs = inpt.to(device), trgs.to(device)
-#     rand = torch.randint(0, len(words_to_ids), (inpt.size(0), 2)).to(device)
-#     opFoo.zero_grad()
-#     loss = mFoo(inpt, trgs, rand)
-#     loss.backward()
-#     opFoo.step()
-#     wandb.log({'loss': loss.item()})
+wandb.init(
+    project='hacker-news-word2vec',
+    name='attempt-1',
+    config={
+        'learning_rate': learning_rate,
+        'embedding_dim': embedding_dim,
+        'vocab_size': len(words_to_ids),
+        'batch_size': batch_size
+    }
+)
+mFoo.to(device)
+for epoch in range(1):
+  prgs = tqdm.tqdm(dataloader, desc=f"Epoch {epoch+1}", leave=False)
+  for inpt, trgs in prgs:
+    inpt, trgs = inpt.to(device), trgs.to(device)
+    rand = torch.randint(0, len(words_to_ids), (inpt.size(0), 2)).to(device)
+    opFoo.zero_grad()
+    loss = mFoo(inpt, trgs, rand)
+    loss.backward()
+    opFoo.step()
+    wandb.log({'loss': loss.item()})
 
 
+# # Step 9: Save the model weights and upload to W&B
 # #
 # #
-# #
-# print('Saving...')
-# torch.save(mFoo.state_dict(), './weights.pt')
-# print('Uploading...')
-# artifact = wandb.Artifact('model-weights', type='model')
-# artifact.add_file('./weights.pt')
-# wandb.log_artifact(artifact)
-# print('Done!')
-# wandb.finish()
+print('Saving...')
+torch.save(mFoo.state_dict(), './weights.pt')
+print('Uploading...')
+artifact = wandb.Artifact('model-weights', type='model')
+artifact.add_file('./weights.pt')
+wandb.log_artifact(artifact)
+print('Done!')
+wandb.finish()
