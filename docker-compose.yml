@@ -10,13 +10,13 @@ services:
       - ./frontend:/app
       - /app/node_modules
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_API_URL=${BACKEND_URL}:${BACKEND_PORT}
 
   backend:
     image: ${DOCKER_USERNAME}/hacker-news-backend:latest
     build: ./backend
     ports:
-      - "8000:8000"
+      - "${BACKEND_PORT}:${BACKEND_PORT}"
     volumes:
       - ./backend:/app
 
