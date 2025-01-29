@@ -18,7 +18,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 # Create logs directory if it doesn't exist
 if not os.path.exists("logs"):
     os.makedirs("logs")
@@ -28,13 +27,15 @@ LOG_FILE = "logs/prediction_logs.json"
 version = "0.0.1"
 
 class PredictionRequest(BaseModel):
-    text: str
+    author: str
+    title: str
+    timestamp: str
 
-@app.post("/predict")
-async def predict_score(request: PredictionRequest):
+@app.post("/how_many_upvotes")
+async def predict_score(post: PredictionRequest):
     # Generate random score between 0 and 6000
-    random_score = random.randint(0, 6000)
-    return {"score": random_score}
+    number = random.randint(0, 6000)
+    return {"upvotes": number}
 
 @app.get("/ping")
 async def health_check():
@@ -80,14 +81,3 @@ def save_log(latency: float, text: str, score: int):
     # Save updated logs
     with open(LOG_FILE, "w") as f:
         json.dump(logs, f)
-
-class PredicationRequest2(BaseModel):
-    author: str
-    title: str
-    timestamp: str
-
-@app.post("/how_many_upvotes")
-async def predict_score(post: PredicationRequest2):
-    # Generate random score between 0 and 6000
-    number = random.randint(0, 6000)
-    return {"upvotes": number}
