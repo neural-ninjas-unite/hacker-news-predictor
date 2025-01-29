@@ -7,6 +7,7 @@ import more_itertools
 import requests
 import wandb
 import torch
+import os
 
 
 #
@@ -19,9 +20,14 @@ torch.manual_seed(42)
 # #
 # #
 
-r = requests.get("https://huggingface.co/datasets/ardMLX/text8/resolve/main/text8")
-with open("text8", "wb") as f: f.write(r.content)
-with open('text8') as f: text8: str = f.read()
+
+if not os.path.exists('text8'):
+    r = requests.get("https://huggingface.co/datasets/ardMLX/text8/resolve/main/text8")
+    with open("text8", "wb") as f:
+        f.write(r.content)
+
+with open('text8') as f:
+    text8: str = f.read()
 
 
 # #
