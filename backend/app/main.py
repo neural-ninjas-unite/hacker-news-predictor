@@ -6,13 +6,20 @@ from datetime import datetime
 from typing import List
 import json
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = FastAPI()
+
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost")
+FRONTEND_PORT = os.getenv("FRONTEND_PORT", "3000")
+FRONTEND_URL_PORT = f"{FRONTEND_URL}:{FRONTEND_PORT}"
 
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=[FRONTEND_URL_PORT],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
