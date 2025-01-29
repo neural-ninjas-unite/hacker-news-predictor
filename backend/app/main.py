@@ -35,6 +35,12 @@ class PredictionRequest(BaseModel):
 async def predict_score(post: PredictionRequest):
     # Generate random score between 0 and 6000
     number = random.randint(0, 6000)
+    # Save prediction log
+    save_log(
+        latency=0.0,  # Currently no ML model so latency is 0
+        text=post.title,
+        score=number
+    )
     return {"upvotes": number}
 
 @app.get("/ping")
