@@ -31,7 +31,7 @@ if not os.path.exists("logs"):
 
 LOG_FILE = "logs/prediction_logs.json"
 
-version = "0.0.1"
+version = os.getenv("APP_VERSION", "1.0.0")
 
 class PredictionRequest(BaseModel):
     author: str
