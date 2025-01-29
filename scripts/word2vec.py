@@ -118,7 +118,7 @@ class SkipGramFoo(torch.nn.Module):
 # #
 # #
 # #
-args = (len(words_to_ids), 64, 2)
+args = (len(words_to_ids), 64)
 mFoo = SkipGramFoo(*args)
 print('mFoo', sum(p.numel() for p in mFoo.parameters()))
 opFoo = torch.optim.Adam(mFoo.parameters(), lr=0.003)
@@ -128,13 +128,13 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 # #
 # #
 # #
-# windows = list(more_itertools.windowed(tokens, 3))
-# inputs = [w[1] for w in windows]
-# targets = [[w[0], w[2]] for w in windows]
-# input_tensor = torch.LongTensor(inputs)
-# target_tensor = torch.LongTensor(targets)
-# dataset = torch.utils.data.TensorDataset(input_tensor, target_tensor)
-# dataloader = torch.utils.data.DataLoader(dataset, batch_size=512, shuffle=True)
+windows = list(more_itertools.windowed(tokens, 3))
+inputs = [w[1] for w in windows]
+targets = [[w[0], w[2]] for w in windows]
+input_tensor = torch.LongTensor(inputs)
+target_tensor = torch.LongTensor(targets)
+dataset = torch.utils.data.TensorDataset(input_tensor, target_tensor)
+dataloader = torch.utils.data.DataLoader(dataset, batch_size=512, shuffle=True)
 
 
 # #
