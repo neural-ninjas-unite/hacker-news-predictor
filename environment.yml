@@ -5,4 +5,7 @@ channels:
 dependencies:
   - python=3.12.4
   - pytorch
+  - tqdm
+  - more-itertools
+  - requests
 prefix: /opt/anaconda3/envs/hacker-news
