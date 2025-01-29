@@ -23,6 +23,6 @@ async def predict_score(request: PredictionRequest):
     random_score = random.randint(0, 6000)
     return {"score": random_score}
 
-@app.get("/health")
+@app.get("/ping")
 async def health_check():
-    return {"status": "healthy"} 
+    return "ok"
