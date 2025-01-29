@@ -8,7 +8,7 @@ export default function Home() {
 
   const handleSubmit = async () => {
     try {
-      const response = await fetch('http://localhost:8000/how_many_upvotes', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/how_many_upvotes`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
