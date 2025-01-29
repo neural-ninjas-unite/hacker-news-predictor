@@ -14,6 +14,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+version = "0.0.1"
+
 class PredictionRequest(BaseModel):
     text: str
 
@@ -26,3 +28,7 @@ async def predict_score(request: PredictionRequest):
 @app.get("/ping")
 async def health_check():
     return "ok"
+
+@app.get("/version")
+async def get_version():
+    return {"version": version}
