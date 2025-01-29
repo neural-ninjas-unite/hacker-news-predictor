@@ -10,17 +10,15 @@ import torch
 import os
 
 
-#
-#
-#
+# # STEP 1: Set the random seed
+# #
+# #
 torch.manual_seed(42)
 
 
+# # STEP 2: Download the text8 dataset
 # #
 # #
-# #
-
-
 if not os.path.exists('text8'):
     r = requests.get("https://huggingface.co/datasets/ardMLX/text8/resolve/main/text8")
     with open("text8", "wb") as f:
@@ -52,7 +50,7 @@ def preprocess(text: str) -> list[str]:
   return words
 
 
-# #
+# # STEP 3: Preprocess the text8 dataset
 # #
 # #
 corpus: list[str] = preprocess(text8)
@@ -73,7 +71,7 @@ def create_lookup_tables(words: list[str]) -> tuple[dict[str, int], dict[int, st
   return vocab_to_int, int_to_vocab
 
 
-# #
+# # STEP 4: Create lookup tables
 # #
 # #
 words_to_ids, ids_to_words = create_lookup_tables(corpus)
@@ -92,7 +90,7 @@ print(words_to_ids['have'])      # 3081
 print(len(words_to_ids))         # 63,642
 
 
-# #
+# # STEP 5: Define the SkipGram model
 # #
 # #
 class SkipGramFoo(torch.nn.Module):
@@ -115,7 +113,7 @@ class SkipGramFoo(torch.nn.Module):
     return pst + ngt
 
 
-# #
+# # STEP 6: Create the SkipGram model, optimizer and device
 # #
 # #
 args = (len(words_to_ids), 64)
@@ -125,7 +123,7 @@ opFoo = torch.optim.Adam(mFoo.parameters(), lr=0.003)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
-# #
+# # STEP 7: Create the dataloader
 # #
 # #
 windows = list(more_itertools.windowed(tokens, 3))
