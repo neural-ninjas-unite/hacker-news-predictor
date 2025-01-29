@@ -80,3 +80,14 @@ def save_log(latency: float, text: str, score: int):
     # Save updated logs
     with open(LOG_FILE, "w") as f:
         json.dump(logs, f)
+
+class PredicationRequest2(BaseModel):
+    author: str
+    title: str
+    timestamp: str
+
+@app.post("/how_many_upvotes")
+async def predict_score(post: PredicationRequest2):
+    # Generate random score between 0 and 6000
+    number = random.randint(0, 6000)
+    return {"upvotes": number}
