@@ -116,7 +116,7 @@ class SkipGramFoo(torch.nn.Module):
 # # STEP 6: Create the SkipGram model, optimizer and device
 # #
 # #
-args = (len(words_to_ids), 64)
+args = (len(words_to_ids), 64, 2)
 mFoo = SkipGramFoo(*args)
 print('mFoo', sum(p.numel() for p in mFoo.parameters()))
 opFoo = torch.optim.Adam(mFoo.parameters(), lr=0.003)
