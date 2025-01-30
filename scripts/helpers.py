@@ -1,7 +1,7 @@
 import collections
 import requests
 
-def preprocess(text: str) -> list[str]:
+def preprocess(text: str, min_words: int) -> list[str]:
   text = text.lower()
   text = text.replace('.',  ' <PERIOD> ')
   text = text.replace(',',  ' <COMMA> ')
@@ -16,7 +16,7 @@ def preprocess(text: str) -> list[str]:
   text = text.replace(':',  ' <COLON> ')
   words = text.split()
   stats = collections.Counter(words)
-  words = [word for word in words if stats[word] > 5]
+  words = [word for word in words if stats[word] > min_words]
   return words
 
 def create_lookup_tables(words: list[str]) -> tuple[dict[str, int], dict[int, str]]:

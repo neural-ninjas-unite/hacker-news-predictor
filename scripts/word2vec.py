@@ -31,7 +31,8 @@ with open('text8') as f:
 
 
 # STEP 3: Preprocess the text8 dataset
-corpus: list[str] = preprocess(text8)
+min_words = 5
+corpus: list[str] = preprocess(text8, min_words)
 print(type(corpus)) # <class 'list'>
 print(len(corpus))  # 16,680,599
 print(corpus[:7])   # ['anarchism', 'originated', 'as', 'a', 'term', 'of', 'abuse']
