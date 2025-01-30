@@ -4,6 +4,8 @@ import json
 import pandas as pd
 from pathlib import Path
 from .helpers import preprocess
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning, module="torch._utils")
 
 # Get the directory containing this file
 CURRENT_DIR = Path(__file__).parent
