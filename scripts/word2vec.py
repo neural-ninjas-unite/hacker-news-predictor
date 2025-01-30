@@ -70,9 +70,7 @@ class SkipGram(torch.nn.Module):
     return pst + ngt
 
 
-# # STEP 6: Create the SkipGram model, optimizer and device
-# #
-# #
+# STEP 6: Create the SkipGram model, optimizer and device
 args = (len(words_to_ids), embedding_dim, 2)
 mFoo = SkipGram(*args)
 print('mFoo', sum(p.numel() for p in mFoo.parameters()))
@@ -81,8 +79,6 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
 # # STEP 7: Create the sliding window, dataset and dataloader
-# #
-# #
 windows = list(more_itertools.windowed(tokens, 3))
 inputs = [w[1] for w in windows]
 targets = [[w[0], w[2]] for w in windows]
@@ -92,9 +88,7 @@ dataset = torch.utils.data.TensorDataset(input_tensor, target_tensor)
 dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
 
-# # STEP 8: Train the SkipGram model
-# #
-# #
+# STEP 8: Initialize W&B if enabled
 if USE_WANDB:
     wandb.init(
         project='hacker-news-word2vec',
@@ -106,6 +100,8 @@ if USE_WANDB:
             'batch_size': batch_size
         }
     )
+
+# STEP 9: Train the SkipGram model
 mFoo.to(device)
 for epoch in range(1):
   prgs = tqdm.tqdm(dataloader, desc=f"Epoch {epoch+1}", leave=False)
@@ -120,9 +116,7 @@ for epoch in range(1):
         wandb.log({'loss': loss.item()})
 
 
-# # Step 9: Save the model weights and upload to W&B if enabled
-# #
-# #
+# Step 9: Save the model weights and upload to W&B if enabled
 print('Saving...')
 torch.save(mFoo.state_dict(), './weights.pt')
 
