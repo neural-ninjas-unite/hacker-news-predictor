@@ -25,4 +25,47 @@ def predict_score(title: str) -> float:
     with open(CURRENT_DIR / 'lookup_tables.json', 'r') as f:
         lookup_tables = json.load(f)
 
+    # Preprocess the input title
+    preprocessed_title = preprocess(title, 0)
+    if len(preprocessed_title) == 0:
+        preprocessed_title = ['<UNK>']
+
+    # Get word IDs, using <UNK> for unknown words
+    title_ids = [lookup_tables['words_to_ids'].get(word, 
+                lookup_tables['words_to_ids']['<UNK>']) 
+                for word in preprocessed_title]
+
+    # Get embeddings and average them
+    title_embeddings = word_embeddings[title_ids]
+    title_embedding_avg = torch.mean(title_embeddings, dim=0)
+
+    # Add batch dimension for BatchNorm
+    title_embedding_avg = title_embedding_avg.unsqueeze(0)
+
+    # Load the score predictor model
+    model = ScorePredictor(embedding_dim=64, hidden_dims=[128, 64])
+    model.load_state_dict(torch.load(CURRENT_DIR / 'score_predictor.pt', weights_only=True))
+    model.eval()
+
     return 6
+
+class ScorePredictor(torch.nn.Module):
+    def __init__(self, embedding_dim, hidden_dims):
+        super().__init__()
+        
+        layers = []
+        input_dim = embedding_dim
+        for hidden_dim in hidden_dims:
+            layers.append(torch.nn.Linear(input_dim, hidden_dim))
+            layers.append(torch.nn.ReLU())
+            layers.append(torch.nn.BatchNorm1d(hidden_dim))
+            layers.append(torch.nn.Dropout(0.2))
+            input_dim = hidden_dim
+            
+        self.hidden_network = torch.nn.Sequential(*layers)
+        self.final_layer = torch.nn.Linear(hidden_dims[-1], 1)
+    
+    def forward(self, x):
+        x = self.hidden_network(x)
+        x = self.final_layer(x)
+        return x
