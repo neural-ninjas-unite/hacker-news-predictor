@@ -12,14 +12,12 @@ load_dotenv()
 
 app = FastAPI()
 
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost")
-FRONTEND_PORT = os.getenv("FRONTEND_PORT", "3000")
-FRONTEND_URL_PORT = f"{FRONTEND_URL}:{FRONTEND_PORT}"
+ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
 
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[FRONTEND_URL_PORT],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
