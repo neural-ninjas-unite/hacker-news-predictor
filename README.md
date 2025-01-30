@@ -1,5 +1,4 @@
 # Hacker News Score Predictor
-
 A full stack application that predicts Hacker News scores using Next.js, FastAPI, and PostgreSQL.
 
 ## Setup
