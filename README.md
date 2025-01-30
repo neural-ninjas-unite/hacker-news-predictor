@@ -74,3 +74,55 @@ Make sure if you install anything you run the following:
 ```bash
 conda env export --from-history > environment.yml
 ```
+
+## Hetzner server
+
+- Debian-1208-bookworm-amd64-base
+- docker install instructions: https://docs.docker.com/engine/install/debian/#install-using-the-repository
+```bash
+apt update
+# Add Docker's official GPG key:
+sudo apt-get update
+sudo apt-get install ca-certificates curl
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+
+# Add the repository to Apt sources:
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian \
+  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt-get update
+sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+sudo docker run hello-world
+docker login -u username
+docker pull zeroknowledgeltd/hacker-news-backend:latest
+mkdir mlx
+cd mlx
+mkdir hacker-news
+cd hacker-news
+vi .env
+```
+
+```
+ALLOWED_ORIGINS=*
+APP_VERSION=1.0.0
+```
+
+```bash
+vi docker-compose.yml
+```
+
+```yaml
+version: '3.8'
+
+services:
+  backend:
+    image: zeroknowledgeltd/hacker-news-backend:latest
+    port:
+      - "8000:8000"
+    env_file:
+      - .env
+```
+
