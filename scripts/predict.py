@@ -1,6 +1,15 @@
 import torch
 import json
+import pandas as pd
 from helpers import preprocess
+
+def get_score_stats():
+    # Load original data to get normalization stats
+    df = pd.read_csv('../data-1737988940684.csv')
+    scores = torch.tensor(df['score'].values, dtype=torch.float32)
+    mean_score = scores.mean()
+    std_score = scores.std()
+    return mean_score, std_score
 
 def predict_score(title: str) -> float:
     # Load the model weights and word embeddings
@@ -37,7 +46,12 @@ def predict_score(title: str) -> float:
     with torch.no_grad():
         prediction = model(title_embedding_avg)
         
-    return prediction.item()
+    # Denormalize prediction
+    mean_score, std_score = get_score_stats()
+    denormalized_prediction = (prediction.item() * std_score) + mean_score
+    
+    # Ensure prediction is non-negative
+    return max(0, denormalized_prediction)
 
 class ScorePredictor(torch.nn.Module):
     def __init__(self, embedding_dim, hidden_dims):
