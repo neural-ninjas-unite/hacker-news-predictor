@@ -7,7 +7,7 @@ import json
 import os
 from dotenv import load_dotenv
 import time
-from .utils import hello_world, predict_score
+from .utils import predict_score
 # from predict import predict_score
 
 load_dotenv()
@@ -42,9 +42,6 @@ class PredictionRequest(BaseModel):
 async def get_how_many_upvotes(post: PredictionRequest):
     # Record start time for latency calculation
     start_time = time.time()
-    
-    # Test utils import
-    print(hello_world("HackerNews"))
     
     # Get prediction from model
     score = predict_score(post.title)
