@@ -75,6 +75,28 @@ Make sure if you install anything you run the following:
 conda env export --from-history > environment.yml
 ```
 
+## Building docker image for hetzner server
+
+On my local machine:
+```bash
+docker login -u username
+docker build --platform linux/amd64 -t zeroknowledgeltd/hacker-news-backend:latest ./backend
+docker build --platform linux/amd64 -t zeroknowledgeltd/hacker-news-frontend:latest ./frontend
+docker push zeroknowledgeltd/hacker-news-backend:latest 
+docker push zeroknowledgeltd/hacker-news-frontend:latest
+```
+
+On the remote machine:
+```bash
+# ssh into remote machine
+ssh root@my-ip-address
+cd mlx
+cd hacker-news
+docker pull zeroknowledgeltd/hacker-news-backend:latest
+docker pull zeroknowledgeltd/hacker-news-frontend:latest
+docker compose up -d
+```
+
 ## Hetzner server
 
 - Debian-1208-bookworm-amd64-base
