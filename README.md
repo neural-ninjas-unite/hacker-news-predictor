@@ -45,7 +45,7 @@ Ran these commands:
 ```bash
 conda create --name hacker-news python=3.12.4 -y
 conda activate hacker-news
-conda env export > environment.yml
+conda env export --from-history > environment.yml
 ```
 
 ### How to recreate the environment
@@ -64,7 +64,7 @@ pip install -r requirements.txt
 conda activate hacker-news
 conda env list
 conda install package_name
-conda env export > environment.yml
+conda env export --from-history > environment.yml
 conda deactivate
 ```
 
@@ -72,5 +72,5 @@ conda deactivate
 
 Make sure if you install anything you run the following:
 ```bash
-conda env export > environment.yml
+conda env export --from-history > environment.yml
 ```
