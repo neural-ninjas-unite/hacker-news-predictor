@@ -24,6 +24,7 @@ wheels/
 .venv
 venv/
 ENV/
+*/wandb/*
 
 # Node.js
 node_modules/
@@ -46,4 +47,6 @@ out/
 # Project specific
 word2vec.model
 pytorch_model.pth
+*.csv
 data/ 
+*/logs/prediction_logs.json

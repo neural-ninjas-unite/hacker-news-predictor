@@ -1,0 +1,12 @@
+name: hacker-news
+channels:
+  - https://repo.anaconda.com/pkgs/main
+  - https://repo.anaconda.com/pkgs/r
+dependencies:
+  - python==3.12.2
+  - pytorch
+  - tqdm
+  - more-itertools
+  - requests
+  - wandb
+prefix: /opt/anaconda3/envs/hacker-news
