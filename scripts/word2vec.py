@@ -1,6 +1,3 @@
-#
-#
-#
 import tqdm
 import collections
 import more_itertools
@@ -8,8 +5,15 @@ import requests
 import wandb
 import torch
 import os
+from dotenv import load_dotenv
 
-# # STEP 0: Set hyperparameters
+# Load environment variables
+load_dotenv()
+
+# Get W&B toggle from environment variable
+USE_WANDB = os.getenv('USE_WANDB', 'false').lower() == 'true'
+
+# STEP 0: Set hyperparameters
 learning_rate = 0.003
 embedding_dim = 64
 batch_size=512
@@ -143,16 +147,17 @@ dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle
 # # STEP 8: Train the SkipGram model
 # #
 # #
-wandb.init(
-    project='hacker-news-word2vec',
-    name='attempt-1',
-    config={
-        'learning_rate': learning_rate,
-        'embedding_dim': embedding_dim,
-        'vocab_size': len(words_to_ids),
-        'batch_size': batch_size
-    }
-)
+if USE_WANDB:
+    wandb.init(
+        project='hacker-news-word2vec',
+        name='attempt-1',
+        config={
+            'learning_rate': learning_rate,
+            'embedding_dim': embedding_dim,
+            'vocab_size': len(words_to_ids),
+            'batch_size': batch_size
+        }
+    )
 mFoo.to(device)
 for epoch in range(1):
   prgs = tqdm.tqdm(dataloader, desc=f"Epoch {epoch+1}", leave=False)
@@ -163,17 +168,21 @@ for epoch in range(1):
     loss = mFoo(inpt, trgs, rand)
     loss.backward()
     opFoo.step()
-    wandb.log({'loss': loss.item()})
+    if USE_WANDB:
+        wandb.log({'loss': loss.item()})
 
 
-# # Step 9: Save the model weights and upload to W&B
+# # Step 9: Save the model weights and upload to W&B if enabled
 # #
 # #
 print('Saving...')
 torch.save(mFoo.state_dict(), './weights.pt')
-print('Uploading...')
-artifact = wandb.Artifact('model-weights', type='model')
-artifact.add_file('./weights.pt')
-wandb.log_artifact(artifact)
+
+if USE_WANDB:
+    print('Uploading to W&B...')
+    artifact = wandb.Artifact('model-weights', type='model')
+    artifact.add_file('./weights.pt')
+    wandb.log_artifact(artifact)
+    wandb.finish()
+
 print('Done!')
-wandb.finish()
