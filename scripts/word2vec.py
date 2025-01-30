@@ -5,6 +5,7 @@ import torch
 from helpers import preprocess, download_wikipedia_text8, create_lookup_tables
 import os
 from dotenv import load_dotenv
+import json
 
 # Load environment variables
 load_dotenv()
@@ -43,6 +44,13 @@ tokens = [words_to_ids[word] for word in corpus]
 print(type(tokens)) # <class 'list'>
 print(len(tokens))  # 16,680,599
 print(tokens[:7])   # [5234, 3081, 12, 6, 195, 2, 3134]
+
+with open('lookup_tables.json', 'w') as f: # save lookup_table to json
+    json.dump({
+        'words_to_ids': words_to_ids,
+        'ids_to_words': {int(k): v for k, v in ids_to_words.items()}  # Convert keys to strings
+    }, f)
+print('Lookup tables saved to json file')
 
 print(ids_to_words[5234])        # anarchism
 print(words_to_ids['anarchism']) # 5234
