@@ -1,12 +1,13 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-import random
 from datetime import datetime
 from typing import List
 import json
 import os
 from dotenv import load_dotenv
+import time
+from .predict import predict_score
 
 load_dotenv()
 
@@ -38,15 +39,22 @@ class PredictionRequest(BaseModel):
 
 @app.post("/how_many_upvotes")
 async def get_how_many_upvotes(post: PredictionRequest):
-    # Generate random score between 0 and 6000
-    number = random.randint(0, 6000)
+    # Record start time for latency calculation
+    start_time = time.time()
+    
+    # Get prediction from model
+    score = predict_score(post.title)
+    
+    # Calculate latency
+    latency = time.time() - start_time
+    
     # Save prediction log
     save_log(
-        latency=0.0,  # Currently no ML model so latency is 0
+        latency=latency,
         text=post.title,
-        score=number
+        score=score
     )
-    return {"upvotes": number}
+    return {"upvotes": score}
 
 @app.get("/ping")
 async def health_check():
