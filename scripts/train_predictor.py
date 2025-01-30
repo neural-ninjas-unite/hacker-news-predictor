@@ -3,10 +3,12 @@ import json
 from torch.utils.data import Dataset, DataLoader
 from helpers import preprocess
 import wandb
-import os
+import pandas as pd
 
 def load_from_database():
-    return None, None
+    # Load data from CSV
+    df = pd.read_csv('../data-1737988940684.csv')
+    return df['title'].tolist(), df['score'].tolist()
 
 # 1. Create a Dataset class for your HackerNews data
 class HackerNewsDataset(Dataset):
