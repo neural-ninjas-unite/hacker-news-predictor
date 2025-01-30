@@ -32,7 +32,7 @@ print('Average title embedding shape:', title_embedding_avg.shape)
 print('Average title embedding:', title_embedding_avg)
 
 # Define hidden layer dimensions
-hidden_dims = [32, 16, 8]
+hidden_dims = [16, 8]
 
 # Create sequential layers with ReLU activations
 layers = []
@@ -49,4 +49,10 @@ output = hidden_network(title_embedding_avg)
 print('Final output shape:', output.shape)  # Should be [8]
 print('Final output:', output)
 
+# Add final output layer for upvote prediction
+final_layer = torch.nn.Linear(hidden_dims[-1], 1)
+
+# Get final prediction
+upvote_prediction = final_layer(output)
+print('Predicted upvotes:', upvote_prediction.item())
 
