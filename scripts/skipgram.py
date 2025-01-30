@@ -1,6 +1,6 @@
 import torch
 
-class SkipGramFoo(torch.nn.Module):
+class SkipGram(torch.nn.Module):
   def __init__(self, voc, emb, _):
     super().__init__()
     self.emb = torch.nn.Embedding(num_embeddings=voc, embedding_dim=emb)

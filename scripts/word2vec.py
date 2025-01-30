@@ -4,7 +4,7 @@ import more_itertools
 import requests
 import wandb
 import torch
-from skipgram import SkipGramFoo
+from skipgram import SkipGram
 from helpers import preprocess
 import os
 from dotenv import load_dotenv
@@ -87,7 +87,7 @@ print(len(words_to_ids))         # 63,642
 # #
 # #
 args = (len(words_to_ids), embedding_dim, 2)
-mFoo = SkipGramFoo(*args)
+mFoo = SkipGram(*args)
 print('mFoo', sum(p.numel() for p in mFoo.parameters()))
 opFoo = torch.optim.Adam(mFoo.parameters(), lr=learning_rate)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
