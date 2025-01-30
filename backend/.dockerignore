@@ -46,3 +46,8 @@ pytorch_model.pth
 *.csv
 data/
 logs/
+
+# Keep model files
+!app/weights.pt
+!app/score_predictor.pt
+!app/lookup_tables.json
