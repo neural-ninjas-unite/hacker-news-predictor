@@ -23,7 +23,30 @@ print(lookup_tables['words_to_ids']['ask'])
 title_ids = [lookup_tables['words_to_ids'].get(word, lookup_tables['words_to_ids']['<UNK>']) for word in preprocessed_title]
 print('title_ids: ', title_ids)
 
+# Get the word embeddings for the words in the title
+title_embeddings = word_embeddings[title_ids]
 
+# Average pooling of title embeddings
+title_embedding_avg = torch.mean(title_embeddings, dim=0)
+print('Average title embedding shape:', title_embedding_avg.shape)
+print('Average title embedding:', title_embedding_avg)
 
-# word_ids = [weights['words_to_ids'][word] for word in preprocessed_title]
+# Define hidden layer dimensions
+hidden_dims = [32, 16, 8]
+
+# Create sequential layers with ReLU activations
+layers = []
+input_dim = title_embedding_avg.shape[0]  # 64 from embedding_dim
+for hidden_dim in hidden_dims:
+    layers.append(torch.nn.Linear(input_dim, hidden_dim))
+    layers.append(torch.nn.ReLU())
+    input_dim = hidden_dim
+
+hidden_network = torch.nn.Sequential(*layers)
+
+# Pass the averaged embedding through the layers
+output = hidden_network(title_embedding_avg)
+print('Final output shape:', output.shape)  # Should be [8]
+print('Final output:', output)
+
 
