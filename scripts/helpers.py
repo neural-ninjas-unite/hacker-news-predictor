@@ -1,9 +1,5 @@
 import collections
 
-def test_help():
-  print('helping')
-
-
 def preprocess(text: str) -> list[str]:
   text = text.lower()
   text = text.replace('.',  ' <PERIOD> ')
