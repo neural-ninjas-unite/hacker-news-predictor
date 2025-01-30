@@ -8,7 +8,16 @@ import pandas as pd
 def load_from_database():
     # Load data from CSV
     df = pd.read_csv('../data-1737988940684.csv')
-    return df['title'].tolist(), df['score'].tolist()
+    titles = df['title'].tolist()
+    scores = df['score'].tolist()
+    
+    # Normalize scores
+    scores = torch.tensor(scores, dtype=torch.float32)
+    mean_score = scores.mean()
+    std_score = scores.std()
+    scores = (scores - mean_score) / std_score
+    
+    return titles, scores.tolist()
 
 # 1. Create a Dataset class for your HackerNews data
 class HackerNewsDataset(Dataset):
@@ -50,6 +59,8 @@ class ScorePredictor(torch.nn.Module):
         for hidden_dim in hidden_dims:
             layers.append(torch.nn.Linear(input_dim, hidden_dim))
             layers.append(torch.nn.ReLU())
+            layers.append(torch.nn.BatchNorm1d(hidden_dim))  # Add batch normalization
+            layers.append(torch.nn.Dropout(0.2))  # Add dropout
             input_dim = hidden_dim
             
         self.hidden_network = torch.nn.Sequential(*layers)
@@ -58,15 +69,15 @@ class ScorePredictor(torch.nn.Module):
     def forward(self, x):
         x = self.hidden_network(x)
         x = self.final_layer(x)
-        return torch.relu(x)  # Ensure predictions are non-negative
+        return x  # Remove the ReLU here
 
 # 3. Training setup
 def train_model():
     # Hyperparameters
-    LEARNING_RATE = 0.001
+    LEARNING_RATE = 0.005  # Increased learning rate
     BATCH_SIZE = 32
     EPOCHS = 1000
-    HIDDEN_DIMS = [32, 16]
+    HIDDEN_DIMS = [128, 64]  # Wider network
     
     # Load your data
     titles, scores = load_from_database()
@@ -109,14 +120,14 @@ def train_model():
     optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
     
     # Initialize wandb
-    # wandb.init(
-    #     project='hacker-news-predictor',
-    #     name='score-predictor',
-    #     config={
-    #     'learning_rate': LEARNING_RATE,
-    #     'batch_size': BATCH_SIZE,
-    #     'hidden_dims': HIDDEN_DIMS
-    # })
+    wandb.init(
+        project='hacker-news-predictor',
+        name='score-predictor',
+        config={
+        'learning_rate': LEARNING_RATE,
+        'batch_size': BATCH_SIZE,
+        'hidden_dims': HIDDEN_DIMS
+    })
     
     # Training loop
     for epoch in range(EPOCHS):
@@ -158,17 +169,17 @@ def train_model():
                 val_loss += criterion(predictions, batch_scores.unsqueeze(1)).item()
         
         # Log metrics
-        # wandb.log({
-        #     'train_loss': train_loss / len(train_loader),
-        #     'val_loss': val_loss / len(val_loader),
-        #     'epoch': epoch
-        # })
+        wandb.log({
+            'train_loss': train_loss / len(train_loader),
+            'val_loss': val_loss / len(val_loader),
+            'epoch': epoch
+        })
         
         print(f'Epoch {epoch+1}, Train Loss: {train_loss/len(train_loader):.4f}, Val Loss: {val_loss/len(val_loader):.4f}')
     
     # Save the model
     torch.save(model.state_dict(), 'score_predictor.pt')
-    # wandb.save('score_predictor.pt')
+    wandb.save('score_predictor.pt')
 
 if __name__ == "__main__":
     train_model() 
