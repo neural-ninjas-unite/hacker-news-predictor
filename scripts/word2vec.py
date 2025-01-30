@@ -1,10 +1,9 @@
 import tqdm
-import collections
 import more_itertools
 import wandb
 import torch
 from skipgram import SkipGram
-from helpers import preprocess, download_wikipedia_text8
+from helpers import preprocess, download_wikipedia_text8, create_lookup_tables
 import os
 from dotenv import load_dotenv
 
@@ -20,15 +19,11 @@ embedding_dim = 64
 batch_size=512
 
 
-# # STEP 1: Set the random seed
-# #
-# #
+# STEP 1: Set the random seed
 torch.manual_seed(42)
 
 
-# # STEP 2: Download the text8 dataset
-# #
-# #
+# STEP 2: Download the text8 dataset
 if not os.path.exists('text8'):
     download_wikipedia_text8()
 
@@ -36,40 +31,19 @@ with open('text8') as f:
     text8: str = f.read()
 
 
-# # STEP 3: Preprocess the text8 dataset
-# #
-# #
+# STEP 3: Preprocess the text8 dataset
 corpus: list[str] = preprocess(text8)
 print(type(corpus)) # <class 'list'>
 print(len(corpus))  # 16,680,599
 print(corpus[:7])   # ['anarchism', 'originated', 'as', 'a', 'term', 'of', 'abuse']
 
-
-# #
-# #
-# #
-def create_lookup_tables(words: list[str]) -> tuple[dict[str, int], dict[int, str]]:
-  word_counts = collections.Counter(words)
-  vocab = sorted(word_counts, key=lambda k: word_counts.get(k), reverse=True)
-  int_to_vocab = {ii+1: word for ii, word in enumerate(vocab)}
-  int_to_vocab[0] = '<PAD>'
-  vocab_to_int = {word: ii for ii, word in int_to_vocab.items()}
-  return vocab_to_int, int_to_vocab
-
-
-# # STEP 4: Create lookup tables
-# #
-# #
+# STEP 4: Create lookup tables
 words_to_ids, ids_to_words = create_lookup_tables(corpus)
 tokens = [words_to_ids[word] for word in corpus]
 print(type(tokens)) # <class 'list'>
 print(len(tokens))  # 16,680,599
 print(tokens[:7])   # [5234, 3081, 12, 6, 195, 2, 3134]
 
-
-# #
-# #
-# #
 print(ids_to_words[5234])        # anarchism
 print(words_to_ids['anarchism']) # 5234
 print(words_to_ids['have'])      # 3081
