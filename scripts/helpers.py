@@ -1,4 +1,5 @@
 import collections
+import requests
 
 def preprocess(text: str) -> list[str]:
   text = text.lower()
@@ -17,3 +18,8 @@ def preprocess(text: str) -> list[str]:
   stats = collections.Counter(words)
   words = [word for word in words if stats[word] > 5]
   return words
+
+def download_wikipedia_text8():
+  r = requests.get("https://huggingface.co/datasets/ardMLX/text8/resolve/main/text8")
+  with open("text8", "wb") as f:
+      f.write(r.content)

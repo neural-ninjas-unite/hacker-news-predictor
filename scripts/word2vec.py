@@ -1,11 +1,10 @@
 import tqdm
 import collections
 import more_itertools
-import requests
 import wandb
 import torch
 from skipgram import SkipGram
-from helpers import preprocess
+from helpers import preprocess, download_wikipedia_text8
 import os
 from dotenv import load_dotenv
 
@@ -31,9 +30,7 @@ torch.manual_seed(42)
 # #
 # #
 if not os.path.exists('text8'):
-    r = requests.get("https://huggingface.co/datasets/ardMLX/text8/resolve/main/text8")
-    with open("text8", "wb") as f:
-        f.write(r.content)
+    download_wikipedia_text8()
 
 with open('text8') as f:
     text8: str = f.read()
