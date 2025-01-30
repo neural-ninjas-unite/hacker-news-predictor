@@ -5,18 +5,18 @@ services:
     image: ${DOCKER_USERNAME}/hacker-news-frontend:latest
     build: ./frontend
     ports:
-      - "${FRONTEND_PORT}:${FRONTEND_PORT}"
+      - "3000:3000"
     volumes:
       - ./frontend:/app
       - /app/node_modules
     environment:
-      - NEXT_PUBLIC_API_URL=${BACKEND_URL}:${BACKEND_PORT}
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
 
   backend:
     image: ${DOCKER_USERNAME}/hacker-news-backend:latest
     build: ./backend
     ports:
-      - "${BACKEND_PORT}:${BACKEND_PORT}"
+      - "8000:8000"
     volumes:
       - ./backend:/app
 
