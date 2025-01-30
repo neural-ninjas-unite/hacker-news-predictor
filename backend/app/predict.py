@@ -1,7 +1,13 @@
 import math
 import torch
 import json
-from helpers import preprocess
+import pandas as pd
+import os
+from pathlib import Path
+from .helpers import preprocess
+
+# Get the directory containing this file
+CURRENT_DIR = Path(__file__).parent
 
 # Cache for score statistics
 _score_stats_cache = (4.4123, 7.2894)
@@ -11,11 +17,11 @@ def get_score_stats():
 
 def predict_score(title: str) -> float:
     # Load the model weights and word embeddings
-    weights = torch.load('weights.pt', weights_only=True)
+    weights = torch.load(CURRENT_DIR / 'weights.pt', weights_only=True)
     word_embeddings = weights['emb.weight']
 
     # Load the lookup tables
-    with open('lookup_tables.json', 'r') as f:
+    with open(CURRENT_DIR / 'lookup_tables.json', 'r') as f:
         lookup_tables = json.load(f)
 
     # Preprocess the input title
@@ -37,7 +43,7 @@ def predict_score(title: str) -> float:
 
     # Load the score predictor model
     model = ScorePredictor(embedding_dim=64, hidden_dims=[128, 64])
-    model.load_state_dict(torch.load('score_predictor.pt', weights_only=True))
+    model.load_state_dict(torch.load(CURRENT_DIR / 'score_predictor.pt', weights_only=True))
     model.eval()
 
     # Make prediction
