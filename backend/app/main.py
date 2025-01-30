@@ -37,7 +37,7 @@ class PredictionRequest(BaseModel):
     timestamp: str
 
 @app.post("/how_many_upvotes")
-async def predict_score(post: PredictionRequest):
+async def get_how_many_upvotes(post: PredictionRequest):
     # Generate random score between 0 and 6000
     number = random.randint(0, 6000)
     # Save prediction log
