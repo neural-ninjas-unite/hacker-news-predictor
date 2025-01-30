@@ -1,3 +1,4 @@
+import math
 import torch
 import json
 import pandas as pd
@@ -45,11 +46,11 @@ def predict_score(title: str) -> float:
     # Make prediction
     with torch.no_grad():
         prediction = model(title_embedding_avg)
-        
+
     # Denormalize prediction
     mean_score, std_score = get_score_stats()
-    denormalized_prediction = (prediction.item() * std_score) + mean_score
-    
+    denormalized_prediction = math.ceil((prediction.item() * std_score) + mean_score)
+
     # Ensure prediction is non-negative
     return max(0, denormalized_prediction)
 
