@@ -10,7 +10,7 @@ warnings.filterwarnings("ignore", category=UserWarning, module="torch._utils")
 # Get the directory containing this file
 CURRENT_DIR = Path(__file__).parent
 
-# Cache for score statistics
+# Cache for score statistics (mean_score, std_score)
 _score_stats_cache = (4.4123, 7.2894)
 
 def get_score_stats():
@@ -47,7 +47,16 @@ def predict_score(title: str) -> float:
     model.load_state_dict(torch.load(CURRENT_DIR / 'score_predictor.pt', weights_only=True))
     model.eval()
 
-    return 6
+    # Make prediction
+    with torch.no_grad():
+        prediction = model(title_embedding_avg)
+
+    # Denormalize prediction
+    mean_score, std_score = get_score_stats()
+    denormalized_prediction = math.ceil((prediction.item() * std_score) + mean_score)
+
+    # Ensure prediction is non-negative
+    return max(0, denormalized_prediction)
 
 class ScorePredictor(torch.nn.Module):
     def __init__(self, embedding_dim, hidden_dims):
