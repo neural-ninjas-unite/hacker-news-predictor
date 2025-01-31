@@ -7,7 +7,7 @@ import pandas as pd
 
 def load_from_database():
     # Load data from CSV
-    df = pd.read_csv('../data-1737988940684.csv')
+    df = pd.read_csv('../hn_score_title_10k.csv')
     titles = df['title'].tolist()
     scores = df['score'].tolist()
     

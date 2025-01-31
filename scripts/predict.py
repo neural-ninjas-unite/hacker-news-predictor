@@ -16,7 +16,7 @@ def get_score_stats():
         return _score_stats_cache
     
     # Calculate stats if not cached
-    df = pd.read_csv('../data-1737988940684.csv')
+    df = pd.read_csv('../hn_score_title_10k.csv')
     scores = torch.tensor(df['score'].values, dtype=torch.float32)
     mean_score = scores.mean()
     std_score = scores.std()
