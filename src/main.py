@@ -73,6 +73,42 @@ def plot_regression_results(y_true, y_pred, save_path='models/regression_plot.pn
     plt.savefig(save_path)
     plt.close()
 
+def export_model_parameters(model, save_dir='models'):
+    """Export model weights and biases to CSV files."""
+    os.makedirs(save_dir, exist_ok=True)
+    
+    # Text branch parameters
+    pd.DataFrame(model.text_fc.weight.detach().numpy()).to_csv(
+        f'{save_dir}/text_weights.csv', index=False,
+        header=[f'word2vec_{i}' for i in range(50)]
+    )
+    pd.DataFrame(model.text_fc.bias.detach().numpy().reshape(1, -1)).to_csv(
+        f'{save_dir}/text_biases.csv', index=False,
+        header=[f'bias_{i}' for i in range(32)]
+    )
+    
+    # Numerical branch parameters
+    pd.DataFrame(model.numerical_fc.weight.detach().numpy()).to_csv(
+        f'{save_dir}/numerical_weights.csv', index=False,
+        header=['comments'] + ['time_'+str(i) for i in range(8)] + ['title_'+str(i) for i in range(5)]
+    )
+    pd.DataFrame(model.numerical_fc.bias.detach().numpy().reshape(1, -1)).to_csv(
+        f'{save_dir}/numerical_biases.csv', index=False,
+        header=[f'bias_{i}' for i in range(16)]
+    )
+    
+    # Combined layer parameters
+    pd.DataFrame(model.combined_fc.weight.detach().numpy()).to_csv(
+        f'{save_dir}/combined_weights.csv', index=False,
+        header=[f'feature_{i}' for i in range(48)]
+    )
+    pd.DataFrame(model.combined_fc.bias.detach().numpy().reshape(1, -1)).to_csv(
+        f'{save_dir}/combined_biases.csv', index=False,
+        header=['bias']
+    )
+    
+    logger.info(f"Model parameters exported to {save_dir}/")
+
 def main():
     # Create models directory if it doesn't exist
     os.makedirs('models', exist_ok=True)
@@ -269,6 +305,9 @@ def main():
                         'max': predictions.max().item()
                     }
                 }, 'trained_models.pt')
+                
+                # Export model parameters
+                export_model_parameters(trained_model)
                 
         except Exception as e:
             logger.error(f"Error during evaluation: {str(e)}")
