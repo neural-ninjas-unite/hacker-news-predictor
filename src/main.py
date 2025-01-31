@@ -113,9 +113,13 @@ def main():
         feature_extractor = FeatureExtractor(word2vec_model, word2vec_dataset)
         
         # Step 5: Initialize Late Fusion model
+        num_numerical_features = 14  # 1 (comments) + 8 (time) + 5 (title)
+        if 'url' in train_data:
+            num_numerical_features += 3  # Add domain features if URL is available
+            
         late_fusion_model = LateFusionModel(
             text_embedding_dim=WORD2VEC_PARAMS['embedding_dim'],
-            num_numerical_features=10  # num_comments + 4 time features + 5 title numerical features
+            num_numerical_features=num_numerical_features
         )
         
         # Step 6: Train Late Fusion model

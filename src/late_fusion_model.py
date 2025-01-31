@@ -74,6 +74,7 @@ class FeatureExtractor:
         self.numerical_scaler = StandardScaler()
         self.scaler_is_fit = False
         self.train_numerical_stats = None
+        self.domain_stats = {}  # Store domain statistics
         
     def _preprocess_title(self, title: str) -> str:
         """Enhanced title preprocessing with null check."""
@@ -128,31 +129,128 @@ class FeatureExtractor:
         
         return torch.stack(title_vectors)
     
+    def _extract_domain(self, url):
+        """Extract domain from URL safely."""
+        try:
+            from urllib.parse import urlparse
+            if not url or not isinstance(url, str):
+                return "unknown"
+            domain = urlparse(url).netloc
+            return domain.lower() if domain else "unknown"
+        except:
+            return "unknown"
+            
+    def _compute_domain_stats(self, data):
+        """Compute historical statistics for each domain."""
+        domains = [self._extract_domain(url) for url in data['url']]
+        scores = data['score']
+        
+        domain_stats = {}
+        for domain, score in zip(domains, scores):
+            if domain not in domain_stats:
+                domain_stats[domain] = {'scores': [], 'mean': 0, 'std': 0}
+            domain_stats[domain]['scores'].append(score)
+        
+        # Compute statistics
+        for domain in domain_stats:
+            scores = domain_stats[domain]['scores']
+            domain_stats[domain]['mean'] = np.mean(scores)
+            domain_stats[domain]['std'] = np.std(scores) if len(scores) > 1 else 0
+            domain_stats[domain]['count'] = len(scores)
+        
+        return domain_stats
+        
+    def _extract_domain_features(self, urls):
+        """Extract domain-based features."""
+        domains = [self._extract_domain(url) for url in urls]
+        
+        # Extract features for each domain
+        domain_means = [self.domain_stats.get(d, {}).get('mean', 0) for d in domains]
+        domain_stds = [self.domain_stats.get(d, {}).get('std', 0) for d in domains]
+        domain_counts = [self.domain_stats.get(d, {}).get('count', 0) for d in domains]
+        
+        # Normalize counts using log scale
+        log_counts = np.log1p(domain_counts)
+        
+        return np.column_stack([domain_means, domain_stds, log_counts])
+    
+    def _extract_time_features(self, data: Dict[str, List]) -> np.ndarray:
+        """Extract enhanced time-based features."""
+        batch_size = len(data['num_comments'])
+        
+        if 'time' not in data:
+            return np.zeros((batch_size, 8))  # Increased features
+            
+        try:
+            timestamps = pd.to_datetime(data['time'])
+            
+            # Basic time components
+            hour_of_day = timestamps.dt.hour.values.reshape(-1, 1)
+            day_of_week = timestamps.dt.dayofweek.values.reshape(-1, 1)
+            is_weekend = (day_of_week >= 5).astype(int).reshape(-1, 1)
+            
+            # Enhanced time features
+            is_morning = ((hour_of_day >= 6) & (hour_of_day < 12)).astype(int).reshape(-1, 1)
+            is_afternoon = ((hour_of_day >= 12) & (hour_of_day < 18)).astype(int).reshape(-1, 1)
+            
+            # Cyclical encoding of hour
+            hour_sin = np.sin(2 * np.pi * hour_of_day / 24)
+            hour_cos = np.cos(2 * np.pi * hour_of_day / 24)
+            
+            # Cyclical encoding of day of week
+            day_sin = np.sin(2 * np.pi * day_of_week / 7)
+            day_cos = np.cos(2 * np.pi * day_of_week / 7)
+            
+            features = np.hstack([
+                hour_sin, hour_cos,
+                day_sin, day_cos,
+                is_weekend,
+                is_morning,
+                is_afternoon,
+                day_of_week
+            ])
+            
+            return np.nan_to_num(features, nan=0.0)
+            
+        except Exception as e:
+            logger.warning(f"Error in time feature extraction: {str(e)}")
+            return np.zeros((batch_size, 8))
+            
     def extract_numerical_features(self, data: Dict[str, List], is_training: bool = False) -> np.ndarray:
-        """Extract and normalize numerical features with safeguards."""
-        # Basic features with clipping for stability
+        """Extract and normalize numerical features with domain and enhanced time features."""
+        # Basic features with clipping
         num_comments = np.clip(
             np.array(data['num_comments']).reshape(-1, 1),
             0,
-            np.percentile(data['num_comments'], 99)  # Clip at 99th percentile
+            np.percentile(data['num_comments'], 99)
         )
         
-        # Derived features
+        # Extract features
         time_features = self._extract_time_features(data)
         title_features = self._extract_title_numerical_features(data)
         
-        # Combine all features
-        numerical_features = np.hstack([
-            num_comments,
-            time_features,
-            title_features
-        ])
+        # Domain features if URL is available
+        if 'url' in data:
+            if is_training:
+                self.domain_stats = self._compute_domain_stats(data)
+            domain_features = self._extract_domain_features(data['url'])
+            numerical_features = np.hstack([
+                num_comments,
+                time_features,
+                title_features,
+                domain_features
+            ])
+        else:
+            numerical_features = np.hstack([
+                num_comments,
+                time_features,
+                title_features
+            ])
         
         # Handle NaN/Inf values
         numerical_features = np.nan_to_num(numerical_features, nan=0.0, posinf=0.0, neginf=0.0)
         
         if is_training:
-            # Fit scaler on training data and save statistics
             self.numerical_scaler.fit(numerical_features)
             self.scaler_is_fit = True
             self.train_numerical_stats = {
@@ -169,32 +267,6 @@ class FeatureExtractor:
         scaled_features = self.numerical_scaler.transform(numerical_features)
         return np.clip(scaled_features, -5, 5)  # Clip to reasonable range
         
-    def _extract_time_features(self, data: Dict[str, List]) -> np.ndarray:
-        """Extract time-based features with enhanced stability."""
-        batch_size = len(data['num_comments'])
-        
-        if 'time' not in data:
-            return np.zeros((batch_size, 4))
-            
-        try:
-            timestamps = pd.to_datetime(data['time'])
-            
-            # Extract time components with bounds
-            hour_of_day = np.clip(timestamps.dt.hour.values, 0, 23).reshape(-1, 1)
-            day_of_week = np.clip(timestamps.dt.dayofweek.values, 0, 6).reshape(-1, 1)
-            is_weekend = (day_of_week >= 5).astype(int).reshape(-1, 1)
-            
-            # Convert hour to bounded cyclical features
-            hour_sin = np.sin(2 * np.pi * hour_of_day / 24)
-            hour_cos = np.cos(2 * np.pi * hour_of_day / 24)
-            
-            features = np.hstack([hour_sin, hour_cos, day_of_week, is_weekend])
-            return np.nan_to_num(features, nan=0.0)
-            
-        except Exception as e:
-            logger.warning(f"Error in time feature extraction: {str(e)}")
-            return np.zeros((batch_size, 4))
-            
     def _extract_title_numerical_features(self, data: Dict[str, List]) -> np.ndarray:
         """Extract numerical features from titles with enhanced stability."""
         titles = data['title']
