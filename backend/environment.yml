@@ -1,0 +1,17 @@
+name: myenv
+channels:
+  - pytorch
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.9
+  - pytorch=2.1.0
+  - cpuonly
+  - fastapi=0.104.1
+  - uvicorn=0.24.0
+  - python-dotenv=1.0.0
+  - pandas=2.1.3
+  - numpy=1.24.0
+  - pip
+  - pip:
+    - python-multipart 
