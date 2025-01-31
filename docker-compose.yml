@@ -2,6 +2,7 @@ version: '3.8'
 
 services:
   frontend:
+    image: ${DOCKER_USERNAME}/hacker-news-frontend:latest
     build: ./frontend
     ports:
       - "3000:3000"
@@ -12,26 +13,9 @@ services:
       - NEXT_PUBLIC_API_URL=http://localhost:8000
 
   backend:
+    image: ${DOCKER_USERNAME}/hacker-news-backend:latest
     build: ./backend
     ports:
       - "8000:8000"
     volumes:
       - ./backend:/app
-    environment:
-      - DATABASE_URL=postgresql://user:password@db:5432/hackernews
-    depends_on:
-      - db
-
-  db:
-    image: postgres:14
-    ports:
-      - "5432:5432"
-    environment:
-      - POSTGRES_USER=user
-      - POSTGRES_PASSWORD=password
-      - POSTGRES_DB=hackernews
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
-volumes:
-  postgres_data: 

@@ -8,15 +8,19 @@ export default function Home() {
 
   const handleSubmit = async () => {
     try {
-      const response = await fetch('http://localhost:8000/predict', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/how_many_upvotes`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ text: input }),
+        body: JSON.stringify({ 
+          title: input,
+          author: "anonymous",
+          timestamp: new Date().toISOString()
+        }),
       })
       const data = await response.json()
-      setScore(data.score)
+      setScore(data.upvotes)
     } catch (error) {
       console.error('Error:', error)
     }
@@ -29,7 +33,7 @@ export default function Home() {
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Enter your text here..."
+          placeholder="Enter your title here..."
           className={styles.input}
         />
         <button onClick={handleSubmit} className={styles.button}>
@@ -37,7 +41,7 @@ export default function Home() {
         </button>
         {score !== null && (
           <div className={styles.result}>
-            Predicted score: {score}
+            Predicted upvotes: {score}
           </div>
         )}
       </div>

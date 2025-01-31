@@ -1,20 +1,5 @@
 # Hacker News Score Predictor
-
-This project implements a late fusion model to predict Hacker News post scores using various features including:
-- Title text (processed using Word2Vec pre-trained on Wikipedia)
-- Number of comments
-- Author information
-
-## Project Structure
-
-```
-.
-├── README.md
-├── requirements.txt
-└── src/
-    ├── model.py      # Contains model architecture and utility functions
-    └── main.py       # Main script to run the training
-```
+A full stack application that predicts Hacker News scores using Next.js, FastAPI, and PostgreSQL.
 
 ## Setup
 
@@ -33,48 +18,121 @@ pip install -r requirements.txt
 
 To train the model:
 
-```bash
-python src/main.py
+The data file is (`hn_score_title_10k.csv`). It was queried from the database with this query:
+```sql
+SELECT title, score FROM hacker_news.items WHERE type = 'story' AND title IS NOT NULL
+ORDER BY id ASC LIMIT 10000
 ```
 
-This will:
-1. Load the pre-trained Word2Vec model
-2. Fetch data from the Hacker News database
-3. Process features (text, numerical, and author features)
-4. Train the late fusion model
-5. Save the trained model as 'trained_model.pth'
 
-## Model Architecture
+## Conda python environment instructions
 
-The late fusion model consists of three branches:
-1. Text Processing Branch:
-   - Processes title text using Word2Vec embeddings
-   - Two fully connected layers with ReLU activation and dropout
+### How I created the environment
 
-2. Numerical Processing Branch:
-   - Processes numerical features (number of comments)
-   - Two fully connected layers with ReLU activation
+Ran these commands:
+```bash
+conda create --name hacker-news python=3.12.4 -y
+conda activate hacker-news
+conda env export --from-history > environment.yml
+```
 
-3. Author Processing Branch:
-   - Processes author information using one-hot encoding
-   - Two fully connected layers with ReLU activation
+### How to recreate the environment
 
-These branches are combined in a fusion layer that produces the final score prediction.
+```bash
+# Using conda
+conda env create -f environment.yml
 
-## Data
+# Or using pip
+pip install -r requirements.txt
+```
 
-The model uses data from a PostgreSQL database containing Hacker News posts. The following features are used:
-- Title: The title of the post
-- Score: The number of upvotes (target variable)
-- Author: The post author
-- Number of Comments: The number of comments on the post
+### Using the environment once setup
 
-## Requirements
+```bash
+conda activate hacker-news
+conda env list
+conda install package_name
+conda env export --from-history > environment.yml
+conda deactivate
+```
 
-See `requirements.txt` for a complete list of dependencies. Key requirements include:
-- PyTorch
-- Gensim (for Word2Vec)
-- SQLAlchemy
-- NumPy
-- Pandas
-- scikit-learn
+### Note to devs
+
+Make sure if you install anything you run the following:
+```bash
+conda env export --from-history > environment.yml
+```
+
+## Building docker image for hetzner server
+
+On my local machine:
+```bash
+docker login -u username
+docker build --platform linux/amd64 -t zeroknowledgeltd/hacker-news-backend:latest ./backend
+docker build --platform linux/amd64 -t zeroknowledgeltd/hacker-news-frontend:latest ./frontend
+docker push zeroknowledgeltd/hacker-news-backend:latest 
+docker push zeroknowledgeltd/hacker-news-frontend:latest
+```
+
+On the remote machine:
+```bash
+# ssh into remote machine
+ssh root@my-ip-address
+cd mlx
+cd hacker-news
+docker pull zeroknowledgeltd/hacker-news-backend:latest
+docker pull zeroknowledgeltd/hacker-news-frontend:latest
+docker compose up -d
+```
+
+## Hetzner server
+
+- Debian-1208-bookworm-amd64-base
+- docker install instructions: https://docs.docker.com/engine/install/debian/#install-using-the-repository
+```bash
+apt update
+# Add Docker's official GPG key:
+sudo apt-get update
+sudo apt-get install ca-certificates curl
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+
+# Add the repository to Apt sources:
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian \
+  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt-get update
+sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+sudo docker run hello-world
+docker login -u username
+docker pull zeroknowledgeltd/hacker-news-backend:latest
+mkdir mlx
+cd mlx
+mkdir hacker-news
+cd hacker-news
+vi .env
+```
+
+```
+ALLOWED_ORIGINS=*
+APP_VERSION=1.0.0
+```
+
+```bash
+vi docker-compose.yml
+```
+
+```yaml
+version: '3.8'
+
+services:
+  backend:
+    image: zeroknowledgeltd/hacker-news-backend:latest
+    port:
+      - "8000:8000"
+    env_file:
+      - .env
+```
+
