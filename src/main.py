@@ -109,45 +109,125 @@ def main():
         # Save late fusion checkpoint
         save_checkpoint({
             'late_fusion_state_dict': trained_model.state_dict(),
-            'late_fusion_params': LATE_FUSION_PARAMS
+            'late_fusion_params': LATE_FUSION_PARAMS,
+            'feature_extractor_state': {
+                'scaler_state': feature_extractor.numerical_scaler.__dict__,
+                'train_stats': feature_extractor.train_numerical_stats
+            }
         }, 'late_fusion_checkpoint.pt')
         
         # Step 7: Evaluate on test set
         logger.info("Evaluating model on test set...")
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         
-        # Extract test features
-        test_title_features = feature_extractor.extract_title_features(test_data['title'])
-        test_numerical_features = feature_extractor.extract_numerical_features(test_data)
-        
-        # Normalize test targets the same way as training
-        test_targets = torch.FloatTensor(test_data['score'].values)
-        target_mean = test_targets.mean()
-        target_std = test_targets.std()
-        test_targets = torch.clamp((test_targets - target_mean) / target_std, min=-1, max=1)
-        
-        # Convert to tensors
-        test_title_features = test_title_features.to(device)
-        test_numerical_features = torch.FloatTensor(test_numerical_features).to(device)
-        test_targets = test_targets.to(device)
-        
-        # Get predictions
-        trained_model.eval()
-        with torch.no_grad():
-            try:
-                predictions = trained_model(test_title_features, test_numerical_features)
-                # Denormalize predictions for true MSE
-                predictions = predictions.squeeze() * target_std + target_mean
-                test_targets_denorm = test_targets * target_std + target_mean
-                test_loss = torch.nn.MSELoss()(predictions, test_targets_denorm)
-                logger.info(f"Test MSE Loss: {test_loss.item():.4f}")
+        try:
+            # Extract test features using the same scaler fit on training data
+            test_title_features = feature_extractor.extract_title_features(test_data['title'])
+            test_numerical_features = feature_extractor.extract_numerical_features(test_data, is_training=False)
+            
+            # Log feature statistics
+            logger.info("\nFeature Statistics:")
+            logger.info(f"Title features shape: {test_title_features.shape}")
+            logger.info(f"Numerical features shape: {test_numerical_features.shape}")
+            logger.info(f"Numerical features stats - Mean: {test_numerical_features.mean():.4f}, Std: {test_numerical_features.std():.4f}")
+            
+            # Get training data statistics for normalization
+            train_targets = torch.FloatTensor(train_data['score'].values)
+            train_mean = train_targets.mean()
+            train_std = train_targets.std()
+            logger.info(f"\nTraining data statistics:")
+            logger.info(f"- Mean: {train_mean:.2f}")
+            logger.info(f"- Std: {train_std:.2f}")
+            logger.info(f"- Min: {train_targets.min().item():.2f}")
+            logger.info(f"- Max: {train_targets.max().item():.2f}")
+            
+            # Normalize test targets using training statistics
+            test_targets = torch.FloatTensor(test_data['score'].values)
+            normalized_test_targets = torch.clamp((test_targets - train_mean) / train_std, min=-1, max=1)
+            
+            # Convert to tensors and move to device
+            test_title_features = test_title_features.to(device)
+            test_numerical_features = torch.FloatTensor(test_numerical_features).to(device)
+            normalized_test_targets = normalized_test_targets.to(device)
+            
+            # Set model to eval mode
+            trained_model = trained_model.to(device)
+            trained_model.eval()
+            
+            with torch.no_grad():
+                # Get predictions in smaller batches
+                batch_size = 128
+                all_predictions = []
                 
-                # Also log some basic statistics
-                logger.info(f"Predictions - Mean: {predictions.mean():.2f}, Std: {predictions.std():.2f}")
-                logger.info(f"Actual - Mean: {test_targets_denorm.mean():.2f}, Std: {test_targets_denorm.std():.2f}")
-            except Exception as e:
-                logger.error(f"Error during evaluation: {str(e)}")
-                test_loss = torch.tensor(float('nan'))
+                for i in range(0, len(test_title_features), batch_size):
+                    batch_title = test_title_features[i:i + batch_size]
+                    batch_numerical = test_numerical_features[i:i + batch_size]
+                    
+                    # Get normalized predictions for batch
+                    batch_predictions = trained_model(batch_title, batch_numerical).squeeze()
+                    
+                    # Check for NaN in batch predictions
+                    if torch.isnan(batch_predictions).any():
+                        logger.warning(f"NaN detected in batch {i//batch_size + 1}")
+                        logger.info(f"Batch title features stats - Mean: {batch_title.mean():.4f}, Std: {batch_title.std():.4f}")
+                        logger.info(f"Batch numerical features stats - Mean: {batch_numerical.mean():.4f}, Std: {batch_numerical.std():.4f}")
+                    
+                    all_predictions.append(batch_predictions)
+                
+                # Combine all predictions
+                normalized_predictions = torch.cat(all_predictions)
+                
+                # Log normalized prediction statistics
+                logger.info("\nNormalized Prediction Statistics:")
+                logger.info(f"- Mean: {normalized_predictions.mean():.4f}")
+                logger.info(f"- Std: {normalized_predictions.std():.4f}")
+                logger.info(f"- Min: {normalized_predictions.min():.4f}")
+                logger.info(f"- Max: {normalized_predictions.max():.4f}")
+                
+                # Denormalize predictions
+                predictions = normalized_predictions * train_std + train_mean
+                
+                # Ensure predictions are non-negative
+                predictions = torch.clamp(predictions, min=0)
+                
+                # Calculate MSE on denormalized values
+                test_loss = torch.nn.MSELoss()(predictions, test_targets.to(device))
+                logger.info(f"\nTest MSE Loss: {test_loss.item():.4f}")
+                
+                # Log final statistics
+                logger.info("\nFinal Statistics:")
+                logger.info("Predictions:")
+                logger.info(f"- Mean: {predictions.mean():.2f}")
+                logger.info(f"- Std: {predictions.std():.2f}")
+                logger.info(f"- Min: {predictions.min():.2f}")
+                logger.info(f"- Max: {predictions.max():.2f}")
+                logger.info("Actual Targets:")
+                logger.info(f"- Mean: {test_targets.mean():.2f}")
+                logger.info(f"- Std: {test_targets.std():.2f}")
+                logger.info(f"- Min: {test_targets.min():.2f}")
+                logger.info(f"- Max: {test_targets.max():.2f}")
+                
+                # Save all statistics
+                save_checkpoint({
+                    'word2vec_state_dict': word2vec_model.state_dict(),
+                    'late_fusion_state_dict': trained_model.state_dict(),
+                    'word2vec_params': WORD2VEC_PARAMS,
+                    'late_fusion_params': LATE_FUSION_PARAMS,
+                    'train_mean': train_mean.item(),
+                    'train_std': train_std.item(),
+                    'test_mse': test_loss.item(),
+                    'prediction_stats': {
+                        'mean': predictions.mean().item(),
+                        'std': predictions.std().item(),
+                        'min': predictions.min().item(),
+                        'max': predictions.max().item()
+                    }
+                }, 'trained_models.pt')
+                
+        except Exception as e:
+            logger.error(f"Error during evaluation: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
         
         # Step 8: Save final models
         logger.info("Saving final models...")
@@ -156,8 +236,8 @@ def main():
             'late_fusion_state_dict': trained_model.state_dict(),
             'word2vec_params': WORD2VEC_PARAMS,
             'late_fusion_params': LATE_FUSION_PARAMS,
-            'target_mean': target_mean,
-            'target_std': target_std
+            'target_mean': train_mean.item(),
+            'target_std': train_std.item()
         }, 'trained_models.pt')
         
         logger.info("Training complete!")

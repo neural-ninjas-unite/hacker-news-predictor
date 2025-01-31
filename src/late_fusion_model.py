@@ -56,6 +56,8 @@ class FeatureExtractor:
         self.word2vec_model = word2vec_model
         self.word2vec_dataset = word2vec_dataset
         self.numerical_scaler = StandardScaler()
+        self.scaler_is_fit = False
+        self.train_numerical_stats = None
         
     def _preprocess_title(self, title: str) -> str:
         """Enhanced title preprocessing with null check."""
@@ -110,10 +112,14 @@ class FeatureExtractor:
         
         return torch.stack(title_vectors)
     
-    def extract_numerical_features(self, data: Dict[str, List]) -> np.ndarray:
-        """Extract and normalize enhanced numerical features."""
-        # Basic features
-        num_comments = np.array(data['num_comments']).reshape(-1, 1)
+    def extract_numerical_features(self, data: Dict[str, List], is_training: bool = False) -> np.ndarray:
+        """Extract and normalize numerical features with safeguards."""
+        # Basic features with clipping for stability
+        num_comments = np.clip(
+            np.array(data['num_comments']).reshape(-1, 1),
+            0,
+            np.percentile(data['num_comments'], 99)  # Clip at 99th percentile
+        )
         
         # Derived features
         time_features = self._extract_time_features(data)
@@ -126,74 +132,78 @@ class FeatureExtractor:
             title_features
         ])
         
-        # Fit scaler if not already fit
-        if not hasattr(self.numerical_scaler, 'mean_'):
-            self.numerical_scaler.fit(numerical_features)
+        # Handle NaN/Inf values
+        numerical_features = np.nan_to_num(numerical_features, nan=0.0, posinf=0.0, neginf=0.0)
         
-        return self.numerical_scaler.transform(numerical_features)
-    
+        if is_training:
+            # Fit scaler on training data and save statistics
+            self.numerical_scaler.fit(numerical_features)
+            self.scaler_is_fit = True
+            self.train_numerical_stats = {
+                'mean': numerical_features.mean(axis=0),
+                'std': numerical_features.std(axis=0),
+                'min': numerical_features.min(axis=0),
+                'max': numerical_features.max(axis=0)
+            }
+            
+        if not self.scaler_is_fit:
+            raise ValueError("Scaler must be fit on training data first")
+            
+        # Transform features with clipping
+        scaled_features = self.numerical_scaler.transform(numerical_features)
+        return np.clip(scaled_features, -5, 5)  # Clip to reasonable range
+        
     def _extract_time_features(self, data: Dict[str, List]) -> np.ndarray:
-        """Extract time-based features with fallback for missing time data."""
+        """Extract time-based features with enhanced stability."""
         batch_size = len(data['num_comments'])
         
-        # If time data is not available, return zero features
         if 'time' not in data:
-            # Return zeros for all time features (hour_sin, hour_cos, day_of_week, is_weekend)
             return np.zeros((batch_size, 4))
             
-        timestamps = pd.to_datetime(data['time'])
-        
-        # Extract various time components
-        hour_of_day = timestamps.dt.hour.values.reshape(-1, 1)
-        day_of_week = timestamps.dt.dayofweek.values.reshape(-1, 1)
-        is_weekend = (day_of_week >= 5).astype(int).reshape(-1, 1)
-        
-        # Convert hour to cyclical features
-        hour_sin = np.sin(2 * np.pi * hour_of_day / 24)
-        hour_cos = np.cos(2 * np.pi * hour_of_day / 24)
-        
-        return np.hstack([
-            hour_sin,
-            hour_cos,
-            day_of_week,
-            is_weekend
-        ])
-    
+        try:
+            timestamps = pd.to_datetime(data['time'])
+            
+            # Extract time components with bounds
+            hour_of_day = np.clip(timestamps.dt.hour.values, 0, 23).reshape(-1, 1)
+            day_of_week = np.clip(timestamps.dt.dayofweek.values, 0, 6).reshape(-1, 1)
+            is_weekend = (day_of_week >= 5).astype(int).reshape(-1, 1)
+            
+            # Convert hour to bounded cyclical features
+            hour_sin = np.sin(2 * np.pi * hour_of_day / 24)
+            hour_cos = np.cos(2 * np.pi * hour_of_day / 24)
+            
+            features = np.hstack([hour_sin, hour_cos, day_of_week, is_weekend])
+            return np.nan_to_num(features, nan=0.0)
+            
+        except Exception as e:
+            logger.warning(f"Error in time feature extraction: {str(e)}")
+            return np.zeros((batch_size, 4))
+            
     def _extract_title_numerical_features(self, data: Dict[str, List]) -> np.ndarray:
-        """Extract numerical features from titles with null handling."""
+        """Extract numerical features from titles with enhanced stability."""
         titles = data['title']
+        batch_size = len(titles)
         
-        # Handle None values in titles
-        def safe_title_length(title):
-            return len(title) if title and isinstance(title, str) else 0
+        try:
+            # Safe feature extraction with bounds
+            title_lengths = np.clip([safe_title_length(t) for t in titles], 0, 500).reshape(-1, 1)
+            word_counts = np.clip([safe_word_count(t) for t in titles], 0, 100).reshape(-1, 1)
+            question_marks = np.clip([safe_char_count(t, '?') for t in titles], 0, 10).reshape(-1, 1)
+            exclamation_marks = np.clip([safe_char_count(t, '!') for t in titles], 0, 10).reshape(-1, 1)
+            has_numbers_array = np.array([has_numbers(t) for t in titles], dtype=np.float32).reshape(-1, 1)
             
-        def safe_word_count(title):
-            return len(title.split()) if title and isinstance(title, str) else 0
+            features = np.hstack([
+                title_lengths,
+                word_counts,
+                question_marks,
+                exclamation_marks,
+                has_numbers_array
+            ])
+            return np.nan_to_num(features, nan=0.0)
             
-        def safe_char_count(title, char):
-            return title.count(char) if title and isinstance(title, str) else 0
-            
-        def has_numbers(title):
-            return bool(re.search(r'\d', title)) if title and isinstance(title, str) else False
-        
-        # Title length features with null handling
-        title_lengths = np.array([safe_title_length(title) for title in titles]).reshape(-1, 1)
-        word_counts = np.array([safe_word_count(title) for title in titles]).reshape(-1, 1)
-        
-        # Special character features with null handling
-        question_marks = np.array([safe_char_count(title, '?') for title in titles]).reshape(-1, 1)
-        exclamation_marks = np.array([safe_char_count(title, '!') for title in titles]).reshape(-1, 1)
-        
-        # Presence of numbers with null handling
-        has_numbers_array = np.array([has_numbers(title) for title in titles]).reshape(-1, 1)
-        
-        return np.hstack([
-            title_lengths,
-            word_counts,
-            question_marks,
-            exclamation_marks,
-            has_numbers_array
-        ])
+        except Exception as e:
+            logger.warning(f"Error in title feature extraction: {str(e)}")
+            return np.zeros((batch_size, 5))
 
 class LateFusionModel(nn.Module):
     def __init__(self, text_embedding_dim, num_numerical_features):
@@ -264,7 +274,13 @@ def train_late_fusion(model, feature_extractor, train_data, num_epochs, batch_si
     
     # Extract and normalize features
     title_features = feature_extractor.extract_title_features(train_data['title'])
-    numerical_features = feature_extractor.extract_numerical_features(train_data)
+    numerical_features = feature_extractor.extract_numerical_features(train_data, is_training=True)  # Set training flag
+    
+    # Log feature statistics during training
+    logger.info("\nTraining Feature Statistics:")
+    logger.info(f"Title features shape: {title_features.shape}")
+    logger.info(f"Numerical features shape: {numerical_features.shape}")
+    logger.info(f"Numerical features stats - Mean: {numerical_features.mean():.4f}, Std: {numerical_features.std():.4f}")
     
     # Normalize and clip targets more aggressively
     targets = torch.FloatTensor(train_data['score'].values)
