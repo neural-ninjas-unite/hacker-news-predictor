@@ -115,7 +115,7 @@ def main():
         # Step 5: Initialize Late Fusion model
         num_numerical_features = 14  # 1 (comments) + 8 (time) + 5 (title)
         if 'url' in train_data:
-            num_numerical_features += 3  # Add domain features if URL is available
+            num_numerical_features += 5  # Add domain features: mean, std, count, log_mean, popularity
             
         late_fusion_model = LateFusionModel(
             text_embedding_dim=WORD2VEC_PARAMS['embedding_dim'],

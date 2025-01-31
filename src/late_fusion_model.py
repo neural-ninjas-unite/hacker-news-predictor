@@ -136,19 +136,33 @@ class FeatureExtractor:
             if not url or not isinstance(url, str):
                 return "unknown"
             domain = urlparse(url).netloc
+            # Remove www. prefix if present
+            domain = domain.replace('www.', '')
+            # Get base domain (e.g., github.com from sub.github.com)
+            parts = domain.split('.')
+            if len(parts) > 2:
+                domain = '.'.join(parts[-2:])
             return domain.lower() if domain else "unknown"
         except:
             return "unknown"
             
     def _compute_domain_stats(self, data):
         """Compute historical statistics for each domain."""
-        domains = [self._extract_domain(url) for url in data['url']]
-        scores = data['score']
+        domains = []
+        scores = []
+        
+        # Safely extract domains and scores
+        for idx, row in data.iterrows():
+            url = row.get('url', '')
+            score = row.get('score', 0)
+            domain = self._extract_domain(url)
+            domains.append(domain)
+            scores.append(score)
         
         domain_stats = {}
         for domain, score in zip(domains, scores):
             if domain not in domain_stats:
-                domain_stats[domain] = {'scores': [], 'mean': 0, 'std': 0}
+                domain_stats[domain] = {'scores': [], 'mean': 0, 'std': 0, 'count': 0}
             domain_stats[domain]['scores'].append(score)
         
         # Compute statistics
@@ -157,22 +171,35 @@ class FeatureExtractor:
             domain_stats[domain]['mean'] = np.mean(scores)
             domain_stats[domain]['std'] = np.std(scores) if len(scores) > 1 else 0
             domain_stats[domain]['count'] = len(scores)
+            # Add log-transformed statistics
+            domain_stats[domain]['log_mean'] = np.log1p(domain_stats[domain]['mean'])
+            domain_stats[domain]['popularity'] = np.log1p(domain_stats[domain]['count'])
         
         return domain_stats
         
-    def _extract_domain_features(self, urls):
+    def _extract_domain_features(self, data):
         """Extract domain-based features."""
-        domains = [self._extract_domain(url) for url in urls]
+        domains = []
+        for idx, row in data.iterrows():
+            url = row.get('url', '')
+            domain = self._extract_domain(url)
+            domains.append(domain)
         
         # Extract features for each domain
         domain_means = [self.domain_stats.get(d, {}).get('mean', 0) for d in domains]
         domain_stds = [self.domain_stats.get(d, {}).get('std', 0) for d in domains]
         domain_counts = [self.domain_stats.get(d, {}).get('count', 0) for d in domains]
+        domain_log_means = [self.domain_stats.get(d, {}).get('log_mean', 0) for d in domains]
+        domain_popularity = [self.domain_stats.get(d, {}).get('popularity', 0) for d in domains]
         
-        # Normalize counts using log scale
-        log_counts = np.log1p(domain_counts)
-        
-        return np.column_stack([domain_means, domain_stds, log_counts])
+        # Stack all features
+        return np.column_stack([
+            domain_means,
+            domain_stds,
+            domain_counts,
+            domain_log_means,
+            domain_popularity
+        ])
     
     def _extract_time_features(self, data: Dict[str, List]) -> np.ndarray:
         """Extract enhanced time-based features."""
@@ -233,7 +260,7 @@ class FeatureExtractor:
         if 'url' in data:
             if is_training:
                 self.domain_stats = self._compute_domain_stats(data)
-            domain_features = self._extract_domain_features(data['url'])
+            domain_features = self._extract_domain_features(data)
             numerical_features = np.hstack([
                 num_comments,
                 time_features,
