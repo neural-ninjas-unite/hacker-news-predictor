@@ -6,6 +6,10 @@ from sklearn.model_selection import train_test_split
 import os
 import gc
 from tqdm import tqdm
+from sklearn.metrics import r2_score
+import numpy as np
+from sklearn.metrics import mean_absolute_error, mean_squared_error, explained_variance_score
+import matplotlib.pyplot as plt
 
 from data_collection import get_training_data
 from word2vec_model import train_word2vec
@@ -51,6 +55,23 @@ def load_checkpoint(filename='checkpoint.pt'):
         logger.info(f"Loading checkpoint from {path}")
         return torch.load(path)
     return None
+
+def calculate_mape(y_true, y_pred):
+    """Calculate Mean Absolute Percentage Error"""
+    y_true, y_pred = np.array(y_true), np.array(y_pred)
+    return np.mean(np.abs((y_true - y_pred) / y_true)) * 100
+
+def plot_regression_results(y_true, y_pred, save_path='models/regression_plot.png'):
+    """Create and save regression plot"""
+    plt.figure(figsize=(10, 6))
+    plt.scatter(y_true, y_pred, alpha=0.5)
+    plt.plot([y_true.min(), y_true.max()], [y_true.min(), y_true.max()], 'r--', lw=2)
+    plt.xlabel('Actual Scores')
+    plt.ylabel('Predicted Scores')
+    plt.title('Predicted vs Actual Scores')
+    plt.tight_layout()
+    plt.savefig(save_path)
+    plt.close()
 
 def main():
     # Create models directory if it doesn't exist
@@ -193,6 +214,27 @@ def main():
                 # Calculate MSE on denormalized values
                 test_loss = torch.nn.MSELoss()(predictions, test_targets.to(device))
                 logger.info(f"\nTest MSE Loss: {test_loss.item():.4f}")
+                
+                # Calculate R-squared
+                r2 = r2_score(test_targets.numpy(), predictions.numpy())
+                logger.info(f"\nR-squared Score: {r2:.4f}")
+                
+                # Calculate regression metrics
+                mae = mean_absolute_error(test_targets.numpy(), predictions.numpy())
+                rmse = np.sqrt(mean_squared_error(test_targets.numpy(), predictions.numpy()))
+                mape = calculate_mape(test_targets.numpy(), predictions.numpy())
+                exp_var = explained_variance_score(test_targets.numpy(), predictions.numpy())
+                
+                logger.info("\nRegression Metrics:")
+                logger.info(f"Mean Absolute Error (MAE): {mae:.2f}")
+                logger.info(f"Root Mean Square Error (RMSE): {rmse:.2f}")
+                logger.info(f"Mean Absolute Percentage Error (MAPE): {mape:.2f}%")
+                logger.info(f"R-squared Score: {r2:.4f}")
+                logger.info(f"Explained Variance Score: {exp_var:.4f}")
+                
+                # Create regression plot
+                plot_regression_results(test_targets.numpy(), predictions.numpy())
+                logger.info("\nRegression plot saved as 'models/regression_plot.png'")
                 
                 # Log final statistics
                 logger.info("\nFinal Statistics:")
