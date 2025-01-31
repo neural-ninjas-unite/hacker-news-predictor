@@ -14,6 +14,22 @@ from torch.utils.data import TensorDataset, DataLoader
 
 logger = logging.getLogger(__name__)
 
+def safe_title_length(title: str) -> int:
+    """Safely get title length."""
+    return len(title) if title and isinstance(title, str) else 0
+    
+def safe_word_count(title: str) -> int:
+    """Safely count words in title."""
+    return len(title.split()) if title and isinstance(title, str) else 0
+    
+def safe_char_count(title: str, char: str) -> int:
+    """Safely count occurrences of a character in title."""
+    return title.count(char) if title and isinstance(title, str) else 0
+    
+def has_numbers(title: str) -> bool:
+    """Safely check if title contains numbers."""
+    return bool(re.search(r'\d', title)) if title and isinstance(title, str) else False
+
 class SelfAttention(nn.Module):
     def __init__(self, embed_dim):
         super().__init__()
@@ -292,7 +308,6 @@ def train_late_fusion(model, feature_extractor, train_data, num_epochs, batch_si
     dataset = TensorDataset(title_features, torch.FloatTensor(numerical_features), normalized_targets)
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
     
-    logger = logging.getLogger(__name__)
     logger.info("Starting Late Fusion model training...")
     
     for epoch in range(num_epochs):
