@@ -9,4 +9,6 @@ dependencies:
   - more-itertools
   - requests
   - wandb
+  - python-dotenv
+  - pandas
 prefix: /opt/anaconda3/envs/hacker-news
